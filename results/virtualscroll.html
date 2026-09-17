@@ -1,0 +1,1971 @@
+﻿<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>code viewer</title>
+	<style>
+		body {
+			margin: 0;
+			font-family: monospace;
+			color: white;
+			overflow: hidden;
+			font-size: 16px;
+			padding: 0;
+			height: 100%;
+		}
+
+
+
+		#topSpacer, #bottomSpacer {
+			width: 100%;
+		}
+
+		#visible {
+			margin: 0;
+			padding: 0;
+		}
+
+		.ts-ln {
+			background-color: #2a2a2a;
+			width: 3em;
+			text-align: right;
+			padding-right: 8px;
+			font-family: monospace;
+			user-select: none;
+			flex-shrink: 0;
+		}
+		/*
+		.ts-cl {
+			display: flex;
+			flex-direction: row;
+			align-items: flex-start;
+			white-space: pre;
+			font-family: monospace;
+		}*/
+		.ts-cl {
+			display: flex;
+			height: 20px;
+			line-height: 20px;
+			overflow: hidden;
+			box-sizing: border-box;
+			flex-shrink: 0;
+
+
+
+		}
+			.ts-cl.line-select {
+				background-color: rgba(0, 120, 215, 0.2); /* 綺麗で邪魔にならない青系など */
+			}
+			/* コピー成功時に行全体をピカッとさせるクラス */
+			.ts-cl.copy-flash {
+				animation: flashEffect 0.4s ease-out;
+			}
+
+		@keyframes flashEffect {
+			0% {
+				/* コピーした瞬間の色（例：白に近い明るい青） */
+				background-color: rgba(140, 190, 255, 0.8);
+			}
+
+			100% {
+				/* 最終的に通常の背景色（透明など）へ消えていく */
+				background-color: rgba(0, 120, 215, 0.0);
+			}
+		}
+		.ts-cl.jump-flash {
+			animation: jumpFlashEffect 0.7s ease-out; /* 0.7秒かけてじわっと消える */
+		}
+
+		@keyframes jumpFlashEffect {
+			0% {
+				background-color: rgba(255, 230, 100, 0.7); /* 注目を引きやすい黄色 */
+			}
+
+			100% {
+				background-color: rgba(255, 230, 100, 0.0);
+			}
+		}
+
+
+		.ts-ln,
+		.code-content {
+			height: 20px;
+			line-height: 20px;
+			box-sizing: border-box;
+			overflow: hidden;
+			white-space: pre;
+		}
+
+		.ts-ju {
+			background-color: #263d5a;
+		}
+		/* 基本の背景とフォント */
+
+		.ts-code {
+			background-color: #1e1e1e;
+			color: #d4d4d4;
+			font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+			line-height: 1.5;
+			white-space: pre;
+			tab-size: var(--tab-size, 4);
+		}
+
+		/* 言語共通のハイライトカラー */
+		.ts-keyword {
+			color: #569cd6;
+			font-weight: bold;
+		}
+		/* if, return, class */
+		.ts-control {
+			color: #c586c0;
+		}
+		/* 制御系キーワードを分ける場合 */
+		.ts-string {
+			color: #ce9178;
+		}
+		/* "hello" */
+		.ts-number {
+			color: #b5cea8;
+		}
+		/* 123 */
+		.ts-comment {
+			color: #6a9955;
+			font-style: italic;
+		}
+		/* // comment */
+		.ts-type {
+			color: #4ec9b0;
+		}
+		/* string, int, MyClass */
+		.ts-function {
+			color: #dcdcaa;
+		}
+		/* method_name */
+		.ts-function-method {
+			color: #dcdcaa;
+		}
+		/* C#などのメソッド */
+		.ts-variable {
+			color: #9cdcfe;
+		}
+		/* ローカル変数
+		.ts-property {
+			color: #9cdcfe;
+		}*/
+		/* プロパティ */
+		.ts-parameter {
+			color: #9cdcfe;
+		}
+		/* 引数 */
+		.ts-operator {
+			color: #d4d4d4;
+		}
+		/* +, -, = */
+		/*.ts-punctuation-bracket {
+			color: #ffd700;
+		}*/
+		/* { } ( ) */
+		.ts-punctuation-delimiter {
+			color: #d4d4d4;
+		}
+		/* , ; */
+		.ts-label {
+			color: #c586c0;
+		}
+		/* case:, goto: */
+		.ts-type-builtin {
+			color: #569CD6;
+		}
+
+		.ts-variable-parameter {
+			color: #9CDCFE;
+		}
+
+		.ts-tag {
+			color: #569CD6;
+		}
+
+		.ts-attribute {
+			color: #9CDCFE;
+		}
+
+		.ts-string-escape {
+			color: #FFD68F;
+		}
+
+		.ts-function-call {
+			color: #DCDCAA;
+		}
+
+
+		/* 🔍 */
+		#searchContainer, #settingContainer, #definitionContainer {
+			position: fixed;
+			z-index: 1000;
+		}
+		#searchContainer {
+			top: 30px;
+			right: 50px;
+		}
+		#settingContainer {
+			top: 30px;
+			right: 100px;
+		}
+		#definitionContainer {
+			top: 30px;
+			right: 150px;
+		}
+
+
+
+
+		#searchButton, #settingButton, #definitionButton {
+			font-size: 22px;
+			cursor: move;
+		}
+
+		#searchPanel, #settingPanel, #definitionPanel {
+			resize: both; /* 横・縦両方 */
+			overflow: auto; /* 必須 */
+			position: absolute;
+			top: 40px;
+			right: 10px;
+			width: 260px;
+			background: rgba(0,0,0,0.7);
+			color: white;
+			padding: 10px;
+			border-radius: 6px;
+			display: none;
+			z-index: 1000;
+		}
+			#searchPanel.show, #settingPanel.show, #definitionPanel.show {
+				display: block; /* showクラスがついたら表示 */
+			}
+
+		/* textbox */
+
+		#searchBox, #definitionSearchBox, #definitionReferSearchBox {
+			width: 100%;
+			padding: 6px;
+			box-sizing: border-box;
+		}
+
+		#searchRegexLabel, #searchResultLabel, #definitionRegexLabel, #definitionSearchResultLabel {
+			padding: 6px;
+			box-sizing: border-box;
+		}
+		/* ナビ */
+		.searchNav {
+			margin-top: 5px;
+			display: flex;
+			gap: 5px;
+		}
+
+			.searchNav button {
+				flex: 1;
+			}
+
+		/* ヒット表示 */
+
+		#searchInfo {
+			font-size: 12px;
+			text-align: center;
+			margin-top: 4px;
+		}
+
+
+
+		#scroll {
+			background-color: #1e1e1e;
+			margin-top: 16px;
+			height: calc(100vh - 16px);
+			position: relative;
+			overflow-y: scroll;
+		}
+		/* 通常の検索ヒット：枠線を無くし、少しだけ透明度を上げて文字を際立たせる */
+		.search-hit {
+			background-color: rgba(234, 195, 34, 0.25); /* 渋い金/黄色 */
+			color: inherit;
+			border-radius: 0; /* 途中で切れたタグ同士が綺麗に繋がるように角丸を0にします */
+		}
+
+			/* いま選択されている検索ヒット：枠線を無くす代わりに、背景の不透明度を上げて「光っている感」を出す */
+			.search-hit.current-active {
+				background-color: rgba(247, 125, 32, 0.65) !important; /* 濃いオレンジ */
+				color: #ffffff !important; /* 文字を白にして視認性を最優先 */
+				outline: none !important; /* 外枠を完全に排除 */
+				border: none !important;
+				border-radius: 0; /* つなぎ目がフラットに一体化します */
+			}
+
+		/* ==========================================================================
+   ▼ 定義アウトライン（#definitionPanel 内）のスタイル
+   ========================================================================== */
+
+		/* パネル内のリストコンテナ（これがないと、要素が多いときにパネルが画面外に突き抜けます） */
+		#definitionList {
+			margin-top: 10px;
+			max-height: 70vh; /* 画面の高さの7割までに制限（環境に合わせて調整） */
+			overflow-y: auto; /* 縦スクロールを有効に */
+			overflow-x: hidden; /* 横スクロールは隠して ellipsis に任せる */
+			padding-right: 4px;
+		}
+
+			/* スクロールバーの見た目をダークテーマに合わせる（任意） */
+			#definitionList::-webkit-scrollbar {
+				width: 6px;
+			}
+
+			#definitionList::-webkit-scrollbar-thumb {
+				background: rgba(255, 255, 255, 0.2);
+				border-radius: 3px;
+			}
+
+			/* ツリーアイテムとsummaryの共通スタイル */
+			#definitionList summary,
+			#definitionList .tree-item {
+				display: block;
+				padding: 4px 6px;
+				border-radius: 4px;
+				cursor: pointer;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				position: relative;
+				line-height: 1.5;
+				font-size: 16px; /* お好みのサイズに */
+			}
+
+				/* ホバー時の背景色 */
+				#definitionList summary:hover,
+				#definitionList .tree-item:hover {
+					background-color: rgba(255, 255, 255, 0.15);
+					color: #ffffff;
+				}
+
+			/* detailsのデフォルト矢印を消して、独自のインジケータ（▶）を配置 */
+			#definitionList details summary::-webkit-details-marker {
+				display: none;
+			}
+
+			#definitionList details summary {
+				list-style: none;
+				padding-left: 18px !important;
+			}
+
+			#definitionList details > summary::before {
+				content: "▶";
+				position: absolute;
+				left: 4px;
+				top: 5px;
+				font-size: 9px;
+				color: #aaaaaa;
+				transition: transform 0.1s ease;
+			}
+
+			#definitionList details[open] > summary::before {
+				transform: rotate(90deg);
+			}
+
+		/* 子要素（インデント）の線と余白 */
+		.tree-children {
+			margin-left: 8px;
+			padding-left: 6px;
+			border-left: 1px dashed rgba(255, 255, 255, 0.2); /* 白の半透明点線に */
+		}
+
+		/* 末端の要素（子なし）の左余白調整 */
+		#definitionList .tree-item {
+			padding-left: 18px;
+		}
+
+		/* ==========================================================================
+   ▼ アイコン（絵文字）と文字色の一括定義
+   ========================================================================== */
+		/* ==========================================================================
+   ▼ アイコン（絵文字）と文字色の一括定義（修正版）
+   ========================================================================== */
+		#definitionList::before {
+			display: inline-block;
+			margin-right: 6px;
+			font-size: 13px;
+			vertical-align: middle;
+		}
+
+		/* 1. モジュール・コンテナ系 */
+		:is(.definition-module, .definition-charset, .definition-layout) {
+			color: #cccccc;
+		}
+			:is(.definition-module, .definition-charset, .definition-layout)::before {
+				content: "📦";
+			}
+
+		/* 2. 型・クラス定義系 */
+		:is(.definition-type, .definition-import, .definition-text) {
+			color: #4ec9b0;
+		}
+
+			:is(.definition-type, .definition-import, .definition-text)::before {
+				content: "🔹";
+			}
+		/* 階層に関係なく、definition-classの内側にある.nameすべてに適用 */
+		:is(.definition-class, .definition-namespace, .definition-form) {
+			color: #4ec9b0;
+		}
+
+			:is(.definition-class, .definition-namespace, .definition-form)::before {
+				content: "🔷";
+			}
+
+		:is(.definition-interface, .definition-layer, .definition-link) {
+			color: #b5cea8;
+		}
+
+			:is(.definition-interface, .definition-layer, .definition-link)::before {
+				content: "🌐";
+			}
+
+		:is(.definition-struct, .definition-selector, .definition-table) {
+			color: #86c1b9;
+		}
+
+			:is(.definition-struct, .definition-selector, .definition-table)::before {
+				content: "🧱";
+			}
+
+		:is(.definition-alias, .definition-supports, .definition-script) {
+			color: #4fc1ff;
+		}
+
+			:is(.definition-alias, .definition-supports, .definition-script)::before {
+				content: "🏷️";
+			}
+		/* 3. 列挙型系 */
+		:is(.definition-enum, .definition-media) {
+			color: #c586c0;
+		}
+
+			:is(.definition-enum, .definition-media)::before {
+				content: "📜";
+			}
+
+		:is(.definition-enum_member, .definition-starting-style, .definition-other) {
+			color: #c586c0;
+		}
+
+			:is(.definition-enum_member, .definition-starting-style, .definition-other)::before {
+				content: "🔸";
+			}
+		/* 4. 処理・関数・イベント系 */
+		:is(.definition-delegate, .definition-container) {
+			color: #ee9d28;
+		}
+
+			:is(.definition-delegate, .definition-container)::before {
+				content: "⚙️";
+			}
+
+		:is(.definition-method, .definition-scope, .definition-style) {
+			color: #dcdcaa;
+		}
+
+			:is(.definition-method, .definition-scope, .definition-style)::before {
+				content: "⚡";
+			}
+
+		:is(.definition-event, .definition-keyframes) {
+			color: #f44336;
+		}
+
+			:is(.definition-event, .definition-keyframes, .definition-eventlistener)::before {
+				content: "🔔";
+			}
+		/* 5. データ・変数・プロパティ系 */
+		:is(.definition-property, .definition-font-face, .definition-eventlistener) {
+			color: #9cdcfe;
+		}
+
+			:is(.definition-property, .definition-font-face)::before {
+				content: "📝";
+			}
+
+		:is(.definition-field, .definition-page) {
+			color: #9cdcfe;
+		}
+
+			:is(.definition-field, .definition-page)::before {
+				content: "🔹";
+			}
+		/* 6. 特殊マークアップ・Web要素系 */
+		:is(.definition-element, .definition-counter-style, .definition-variable) {
+			color: #ce9178;
+		}
+
+			:is(.definition-element, .definition-counter-style, .definition-variable)::before {
+				content: "🏷️";
+			}
+
+		:is(.definition-section, .definition-function) {
+			color: #608b4e;
+			font-weight: bold;
+		}
+
+			:is(.definition-section, .definition-function)::before {
+				content: "🔖";
+			}
+
+		:is(.definition-view-transition) {
+			color: #708b4e;
+			font-weight: bold;
+		}
+
+			:is(.definition-view-transition)::before {
+				content: "☄";
+			}
+
+		/* タブ全体のコンテナ */
+		.definition-tabs {
+			display: flex;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+			margin-bottom: 8px;
+		}
+		/* タブのボタン */
+		.def-tab-btn {
+			flex: 1;
+			background: none;
+			border: none;
+			color: #858585;
+			padding: 6px 0;
+			font-size: 16px;
+			cursor: pointer;
+			text-align: center;
+			border-bottom: 2px solid transparent;
+			transition: all 0.2s ease;
+		} .def-tab-btn:hover {
+				color: #ffffff;
+			}
+		/* アクティブな（選択中の）タブ */
+		.def-tab-btn.active {
+				color: #4fc1ff; /* 目立つライトブルーなど */
+				border-bottom-2px-solid: #4fc1ff;
+				font-weight: bold;
+			}
+		/* タブコンテンツの表示制御 */
+		.def-tab-content {
+			display: none; /* デフォルトは非表示 */
+		} .def-tab-content.active {
+				display: block; /* activeクラスがついたら表示 */
+			}
+		/* 検索結果リスト用の高さ制限（ツリーと同様にスクロールさせる） */
+		#definitionSearchResultList {
+			max-height: 60vh;
+			overflow-y: auto;
+			margin-top: 8px;
+		} #definitionSearchResultList {
+			max-height: 400px; /* 必要に応じて調整 */
+			overflow-y: auto;
+		} .symbol-item {
+			padding: 6px 10px;
+			cursor: pointer;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			border-bottom: 1px solid #eee;
+		} .symbol-item:hover {
+				background-color: rgba(255, 255, 255, 0.15);
+				color: #ffffff;
+			} .symbol-name {
+			font-weight: bold;
+			color: #333;
+		} .symbol-declaration {
+			color: #888;
+			font-size: 0.9em;
+		}
+		/* クラスやメソッドごとにアイコンや色を変えたい場合のフック */
+		.symbol-item.definition-class .symbol-name {
+			color: #2b579a;
+		} .symbol-item.definition-method .symbol-name {
+			color: #74519a;
+		}
+
+		.tcm-menu {
+			display: none;
+			position: absolute;
+			z-index: 10000;
+			width: 180px;
+			background-color: #252526;
+			color: #cccccc;
+			border: 1px solid #454545;
+			box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+			border-radius: 4px;
+			padding: 4px 0;
+			font-family: sans-serif;
+			font-size: 13px;
+			user-select: none;
+		}
+
+		.tcm-menu-header {
+			padding: 6px 12px;
+			font-size: 11px;
+			color: #888;
+			border-bottom: 1px solid #333;
+			margin-bottom: 4px;
+		}
+
+		.tcm-menu-item {
+			padding: 6px 12px;
+			cursor: pointer;
+		}
+
+			.tcm-menu-item:hover {
+				background-color: #04395e;
+				color: #ffffff;
+			}
+		.def-ln {
+			padding-left: 0.5rem;
+		}
+
+
+	</style>
+</head>
+
+<body>
+
+
+	<div id="scroll">
+		<div id="totalHeightSpacer"></div>
+		<div id="visible" class="ts-code" style="position: absolute; top: 0; left: 0; width: min-content; min-width: 100%;"></div>
+	</div>
+
+	<div id="searchContainer">
+		<div id="searchButton">🔍</div>
+		<div id="searchPanel">
+			<input type="text" id="searchBox" placeholder="検索" autocomplete="off" spellcheck="false" list="searchHistory">
+			<datalist id="searchHistory"></datalist>
+			<div class="searchNav">
+				<label id="searchRegexLabel"><input type="checkbox" id="searchRegex">正規表現</label>
+				<label id="searchResultLabel"></label>
+			</div>
+			<div class="searchNav">
+				<button id="prevBtn">↑</button>
+				<button id="nextBtn">↓</button>
+			</div>
+			<div id="searchInfo"></div>
+		</div>
+	</div>
+	<div id="settingContainer">
+		<div id="settingButton">⚙️</div>
+		<div id="settingPanel">
+			<div class="searchNav">
+				<label for="settingTabNum">タブの幅 (\t)</label>
+				<input type="number" id="settingTabNum" min="1" max="8" value="4" autocomplete="off">
+			</div>
+		</div>
+	</div>
+
+
+
+
+
+
+
+
+
+
+
+
+	/*insert by C#*/
+
+	//
+	//	<script>
+	//
+
+
+
+		class FloatingPopup {
+			constructor(container, button, panel) {
+				this.container = container;
+				this.button = button;
+				this.panel = panel;
+
+				this.isDragging = false;
+				this.offset = { x: 0, y: 0 };
+				this.startPos = { x: 0, y: 0 }; // クリック判定用
+
+				this.initEvents();
+			}
+
+			initEvents() {
+				// --- 1. ドラッグ開始 (pointerdown) ---
+				this.container.addEventListener('pointerdown', (e) => {
+					// パネル内部（入力欄など）を操作しているときはドラッグしない
+					if (this.panel.contains(e.target)) return;
+					// マウスの場合は左クリックのみ受け付ける
+					if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+					this.isDragging = true;
+
+					// クリックされた初期座標を記録（後で移動距離を測るため）
+					this.startPos.x = e.clientX;
+					this.startPos.y = e.clientY;
+
+					// コンテナの現在位置を取得し、マウスとのオフセットを計算
+					const rect = this.container.getBoundingClientRect();
+					this.offset.x = e.clientX - rect.left;
+					this.offset.y = e.clientY - rect.top;
+				});
+
+				// --- 2. ドラッグ中 (pointermoveはdocument全体で監視) ---
+				document.addEventListener('pointermove', (e) => {
+					if (!this.isDragging) return;
+
+					// コンテナの位置を更新
+					this.container.style.left = `${e.clientX - this.offset.x}px`;
+					this.container.style.top = `${e.clientY - this.offset.y}px`;
+					this.container.style.right = "auto";
+				});
+
+				// --- 3. ドラッグ終了 (pointerupはdocument全体で監視) ---
+				document.addEventListener('pointerup', () => {
+					this.isDragging = false;
+				});
+
+				// --- 4. ボタンのクリック (トグル開閉) ---
+				this.button.addEventListener('click', (e) => {
+					// pointerdownした位置から、指が離れるまでにどれだけ動いたかを計算
+					const moveX = Math.abs(e.clientX - this.startPos.x);
+					const moveY = Math.abs(e.clientY - this.startPos.y);
+
+					// 5px以上動いていたら「ドラッグしただけ」とみなして、パネルは開かない
+					if (moveX > 5 || moveY > 5) return;
+
+					this.panel.classList.toggle('show');
+					e.stopPropagation(); // documentのクリックイベントに流さない
+				});
+
+				// --- 5. パネルの外側をクリックしたら閉じる ---
+				//document.addEventListener('click', (e) => {
+				//	if (!this.panel.contains(e.target) && !this.button.contains(e.target)) {
+				//		this.panel.classList.remove('show');
+				//	}
+				//});
+			}
+		}
+
+		function htmlDecode(str) {
+			return str.replace(/&(lt|gt|amp|quot|#39);/g, m => {
+				switch (m) {
+					case "&lt;": return "<";
+					case "&gt;": return ">";
+					case "&amp;": return "&";
+					case "&quot;": return "\"";
+					case "&#39;": return "'";
+				}
+				return m;
+			});
+		}
+
+
+
+
+		const scripts = document.querySelectorAll("script.rawdata");
+		let fileText = "";
+
+		for (let i = 0; i < scripts.length; i++) {
+			let part = scripts[i].textContent;
+			part = htmlDecode(part);   // ← ここでデコード
+			if (i > 0) fileText += ("</" + "script>");
+			fileText += part;
+		}
+
+		const lineHeight = 20;
+		const visibleCount = 60;
+
+		let startLine = 0;
+
+		const scrollEl = document.getElementById("scroll");
+		const visibleEl = document.getElementById("visible");
+		const topSpacer = document.getElementById("totalHeightSpacer");
+
+		const decoder = new TextDecoder("utf-8");
+
+		let searchResults = [];      // [StartByte, EndByte, StartByte, EndByte...]
+		let currentSearchIndex = -1; // 現在選択されているヒットのインデックス (0, 1, 2...)
+		let fullTextStr = null;      // 高速化のため、1回生成した全文文字列をキャッシュする用
+
+
+		const overscan = 10;
+		let isRendering = 0;
+		let defineLine = -1;
+		let allSymbolsData = [];
+		topSpacer.style.height = (lineStartOffsets.length * lineHeight) + "px";
+
+		function render() {
+			const from = Math.max(0, startLine - overscan);
+			const end = Math.min(from + visibleCount + overscan * 2, lineStartOffsets.length);
+
+			let htmlBuffer = "";
+			for (let i = from; i < end; i++) {
+				htmlBuffer += renderLine(i);
+			}
+
+			// 1. 表示するDOMを更新
+			visibleEl.innerHTML = htmlBuffer;
+
+			// 2. 表示エリアの位置を、現在の表示開始位置まで「押し下げる」
+			// topSpacerの代わりに、コンテナごと y 軸方向にずらすのが一番軽くてブレません
+			visibleEl.style.transform = `translateY(${from * lineHeight}px)`;
+		}
+
+		function scrollToLine(targetLineIdx) {
+			// 1. 行番号の境界チェック（0未満や最大行数を超えないようにガード）
+			if (targetLineIdx < 0) {
+				targetLineIdx = 0;
+			} else if (targetLineIdx >= lineStartOffsets.length) {
+				targetLineIdx = lineStartOffsets.length - 1;
+			}
+
+			// 2. 目標の行が、スクロールコンテナの最上部にくるための数値を計算
+			const targetScrollTop = targetLineIdx * lineHeight;
+
+			// 3. スクロール要素の scrollTop を更新（これによって自動的に scroll イベントが走ります）
+			scrollEl.scrollTop = targetScrollTop;
+		}
+
+
+
+		function renderLine(lineIdx) {
+			const lineStart = lineStartOffsets[lineIdx];
+			const lineEnd = (lineIdx + 1 < lineStartOffsets.length)
+				? lineStartOffsets[lineIdx + 1]
+				: fileText.length;
+
+			// 1. この行に被る通常ハイライトと検索ヒットを取得
+			const startIdx = lineRangeBoundaries[lineIdx * 2];
+			const endIdx = lineRangeBoundaries[lineIdx * 2 + 1];
+
+			const activeRangeIndices = [];
+			// startIdx === endIdx のときはこのループは1回も回らない（＝ハイライトなし）ので、安全かつ最速！
+			for (let k = startIdx; k < endIdx; k++) {
+				activeRangeIndices.push(k);
+			}
+			const activeSearchIndices = findSearchIndicesForLine(lineStart, lineEnd);
+
+			let actualEnd = lineEnd;
+			while (actualEnd > lineStart && (fileText[actualEnd - 1] === 10 || fileText[actualEnd - 1] === 13)) {
+				actualEnd--;
+			}
+
+			// 2. この行の中での「状態が変わるポイント（境界）」をすべて洗い出す
+			// [ { pos: バイト位置, type: 'h_start'|'h_end'|'s_start'|'s_end', id/class: 値 }, ... ]
+			const events = [];
+
+			// 通常ハイライトのイベント登録
+			for (const rangeIdx of activeRangeIndices) {
+				const rStart = Math.max(lineStart, highlightRanges[rangeIdx * 3]);
+				const rEnd = Math.min(actualEnd, highlightRanges[rangeIdx * 3 + 1]);
+				const nameId = highlightRanges[rangeIdx * 3 + 2];
+				const capture = captureNames[nameId];
+
+				if (rStart < rEnd) {
+					events.push({ pos: rStart, type: 'h_start', info: capture });
+					events.push({ pos: rEnd, type: 'h_end', info: capture });
+				}
+			}
+
+			// 検索ヒットのイベント登録
+			for (const searchIdx of activeSearchIndices) {
+				const sStart = Math.max(lineStart, searchResults[searchIdx * 2]);
+				const sEnd = Math.min(actualEnd, searchResults[searchIdx * 2 + 1]);
+				const isCurrent = (searchIdx === currentSearchIndex);
+
+				if (sStart < sEnd) {
+					events.push({ pos: sStart, type: 's_start', info: isCurrent });
+					events.push({ pos: sEnd, type: 's_end', info: isCurrent });
+				}
+			}
+
+			// 3. バイト位置の昇順でソート（同じ位置なら end を先に処理してタグを綺麗に閉じる）
+			const typeOrder = { 'h_end': 0, 's_end': 1, 'h_start': 2, 's_start': 3 };
+			events.sort((a, b) => {
+				if (a.pos !== b.pos) return a.pos - b.pos;
+				return typeOrder[a.type] - typeOrder[b.type];
+			});
+
+			// 4. 左から右へスキャンしながら、タグを綺麗にネストさせてHTMLを組み立てる
+			let htmlResult = "";
+			let currentPos = lineStart;
+
+			// 現在のアクティブな状態を管理するフラグ
+			let activeHighlightClass = null;
+			let activeSearchIsCurrent = null; // null: 検索なし, false: 通常ヒット, true: 選択中ヒット
+
+			function emitText(untilPos) {
+				if (untilPos > currentPos) {
+					const textChunk = fileText.slice(currentPos, untilPos); //  decoder.decode(fileText.subarray(currentPos, untilPos));
+					let escaped = escapeHtml(textChunk);
+
+					// 現在の状態に応じてタグを被せる（ネストの狂いを防ぐため、文字に対して直接装飾を充てる）
+					if (activeSearchIsCurrent !== null) {
+						const searchClass = activeSearchIsCurrent ? "search-hit current-active" : "search-hit";
+						escaped = `<mark class='${searchClass}'>${escaped}</mark>`;
+					}
+					if (activeHighlightClass) {
+						escaped = `<span class='ts-${activeHighlightClass}' title='${activeHighlightClass}'>${escaped}</span>`;
+					}
+
+					htmlResult += escaped;
+					currentPos = untilPos;
+				}
+			}
+
+			// イベント駆動で状態を切り替えながら文字列を切り出していく
+			for (const ev of events) {
+				// 現在のイベント位置までのテキストを出力（直前までの状態が適用される）
+				emitText(ev.pos);
+
+				// 状態の更新
+				if (ev.type === 'h_start') activeHighlightClass = ev.info;
+				if (ev.type === 'h_end') activeHighlightClass = null;
+				if (ev.type === 's_start') activeSearchIsCurrent = ev.info; // true or false
+				if (ev.type === 's_end') activeSearchIsCurrent = null;
+			}
+
+			// 残りの末尾テキストを出力
+			emitText(actualEnd);
+
+			let selectClass = '';
+			if (lineSelection && lineSelection.startLine) {
+				const min = Math.min(lineSelection.startLine, lineSelection.endLine);
+				const max = Math.max(lineSelection.startLine, lineSelection.endLine);
+
+				// 2. 現在処理している行（lineIdx）が選択範囲内に入っているか判定
+				const isSelected = lineSelection.startLine !== null && lineIdx >= min && lineIdx <= max;
+				selectClass = isSelected ? 'line-select' : '';
+			}
+
+			let defClass = '';
+			if (defineLine == lineIdx) {
+				defClass = 'jump-flash';
+			}
+
+			// 5. 行番号と合体
+			const displayLineNum = lineIdx + 1;
+			return `<div class='ts-cl ${selectClass} ${defClass}' data-line='${lineIdx}'><div class='ts-ln'>${displayLineNum}</div><div class='code-content'>${htmlResult}</div></div>`;
+		}
+
+		let lineSelection = {
+			startLine: null,
+			endLine: null
+		};
+
+		visibleEl.addEventListener("click", (e) => {
+			// 左クリック（button === 0）のみ処理
+			console.log(e);
+			if (e.button !== 0) return;
+
+			// クリックされた要素、またはその親に .ts-ln があるか探す
+			const lnEl = e.target.closest('.ts-ln');
+			if (!lnEl) {
+				if (lineSelection.startLine) {
+					lineSelection.startLine = null;
+					lineSelection.endLine = null;
+					render();
+				}
+				return; // ここで処理を抜ける
+			}
+
+			// その行番号が属している親の行要素（.ts-cl）を取得
+			const clEl = lnEl.closest('.ts-cl');
+			if (!clEl) return;
+
+			// data-line から行インデックスを数値として取得
+			const clickedLineIdx = parseInt(clEl.getAttribute('data-line'), 10);
+
+			// ーーー 選択ロジック ーーー
+			if (lineSelection.startLine === null) {
+				// 始点が未設定なら、ここを始点・終点にする
+				lineSelection.startLine = clickedLineIdx;
+				lineSelection.endLine = clickedLineIdx;
+			} else {
+				// すでに始点があるなら、ここを新しい終点にする（何回でも更新可能）
+				lineSelection.endLine = clickedLineIdx;
+			}
+
+			// バーチャルスクロールの再描画関数を呼んで .line-select を反映させる
+			render();
+		});
+		// 右クリック（コンテキストメニュー）でのコピー処理
+		visibleEl.addEventListener("contextmenu", (e) => {
+			if (lineSelection.startLine === null || lineSelection.endLine === null) return;
+			e.preventDefault();
+
+			// 選択された行の最小値と最大値を特定
+			const startIdx = Math.min(lineSelection.startLine, lineSelection.endLine);
+			const endIdx = Math.max(lineSelection.startLine, lineSelection.endLine);
+
+			// 1. 選択範囲の「全体の開始位置」を取得
+			const selectionStartOffset = lineStartOffsets[startIdx];
+
+			// 2. 選択範囲の「全体の終了位置」を取得（renderLine と同じロジック）
+			const selectionEndOffset = (endIdx + 1 < lineStartOffsets.length)
+				? lineStartOffsets[endIdx + 1]
+				: fileText.length;
+
+			// 3. fileText から一気に切り出す（改行コードも自動的に含まれます）
+			const selectedText = fileText.substring(selectionStartOffset, selectionEndOffset);
+
+			// クリップボードに書き込み
+			//navigator.clipboard.writeText(selectedText).then(() => {
+			//	console.log("コピーしました！");
+
+			//	// 選択を解除して再描画
+			//	lineSelection.startLine = null;
+			//	lineSelection.endLine = null;
+			//	render();
+			//}).catch(err => {
+			//	console.error("コピーに失敗しました: ", err);
+			//});
+			// クリップボードに書き込み成功した後の処理
+			navigator.clipboard.writeText(selectedText).then(() => {
+				console.log("コピーしました！");
+
+				// 1. 現在画面内に表示されている「選択中の行」をすべて取得
+				const selectedElements = visibleEl.querySelectorAll('.line-select');
+
+				selectedElements.forEach(el => {
+					// 選択中クラスを外し、点滅用クラスを付与
+					el.classList.remove('line-select');
+					el.classList.add('copy-flash');
+				});
+
+				// 2. アニメーションが終わるのを待ってから、データをクリアして完全リセット
+				setTimeout(() => {
+					// アニメーションが終わったので状態をきれいに戻す
+					lineSelection.startLine = null;
+					lineSelection.endLine = null;
+					render();
+				}, 400); // CSSの 0.4s と時間を合わせる
+
+			}).catch(err => {
+				console.error("コピーに失敗しました: ", err);
+			});
+		});
+
+
+
+		// 選択文字列の
+		function getSelectedLineNumber() {
+			const sel = window.getSelection();
+			if (!sel.rangeCount) return null;
+
+			let node = sel.getRangeAt(0).startContainer;
+
+			if (node.nodeType === Node.TEXT_NODE) {
+				node = node.parentElement;
+			}
+
+			const lineEl = node.closest('.ts-cl');
+			return lineEl ? Number(lineEl.dataset.line) + 1 : null;
+		}
+		function getOffsetInLine() {
+			const sel = window.getSelection();
+			if (!sel.rangeCount) return null;
+
+			const range = sel.getRangeAt(0);
+
+			let node = range.startContainer;
+			if (node.nodeType === Node.TEXT_NODE) {
+				node = node.parentElement;
+			}
+
+			const codeContent = node.closest('.code-content');
+			if (!codeContent) return null;
+
+			const preRange = document.createRange();
+
+			// 行頭
+			preRange.selectNodeContents(codeContent);
+
+			// 選択開始位置まで
+			preRange.setEnd(
+				range.startContainer,
+				range.startOffset
+			);
+
+			return preRange.toString().length;
+		}
+		function getSelectedOffset() {
+			const lineNumber = getSelectedLineNumber() - 1;
+			if (!lineNumber) {
+				return null;
+			}
+			console.log(`select line number: ${lineNumber + 1}`);
+			const lineStart = lineStartOffsets[lineNumber];
+			return lineStart + getOffsetInLine();
+		}
+		let lastSelection = null;
+
+		visibleEl.addEventListener("mouseup", () => {
+			const sel = window.getSelection();
+
+			if (!sel.rangeCount) {
+				lastSelection = null;
+				return;
+			}
+
+			lastSelection = getSelectedOffset();
+		});
+
+
+		// 共通エスケープ関数
+		function escapeHtml(str) {
+			return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+		}
+
+
+		/**
+		* 指定された行の範囲（lineStart 〜 lineEnd）に交差する
+		* highlightRanges のインデックス（3個1組のセット単位）のリストを返します。
+		*/
+		function findHighlightRangesForLine(lineStart, lineEnd) {
+			const matchedIndices = [];
+			const totalRanges = highlightRanges.length / 3;
+			if (totalRanges === 0) return matchedIndices;
+
+			// 1. 二分探索で、行の開始位置より「後ろで終わる」最初のハイライトの目星をつける
+			let low = 0;
+			let high = totalRanges - 1;
+			let startIndex = totalRanges;
+
+			while (low <= high) {
+				const mid = (low + high) >> 1;
+				const endByte = highlightRanges[mid * 3 + 1];
+
+				if (endByte > lineStart) {
+					startIndex = mid;
+					high = mid - 1; // もっと手前にあるか探す
+				} else {
+					low = mid + 1;
+				}
+			}
+
+			// 2. 目星をつけた位置から、行の終わりを超えるまで順番に拾う
+			// (C#側で事前にソートされているため、これで完璧に網羅できます)
+			for (let i = startIndex; i < totalRanges; i++) {
+				const startByte = highlightRanges[i * 3];
+
+				// ハイライトの開始位置が、行の終端を超えたらループ終了
+				if (startByte >= lineEnd) break;
+
+				matchedIndices.push(i);
+			}
+
+			return matchedIndices;
+		}
+		/**
+		* 検索ヒット用（[Start, End, ... ] の2個1組の配列を探索）
+		*/
+		function findSearchIndicesForLine(lineStart, lineEnd) {
+			const matchedIndices = [];
+			const totalRanges = searchResults.length / 2; // 2個1組
+			if (totalRanges === 0) return matchedIndices;
+
+			let low = 0;
+			let high = totalRanges - 1;
+			let startIndex = totalRanges;
+
+			while (low <= high) {
+				const mid = (low + high) >> 1;
+				// ★ 2個1組なので mid * 2 + 1 が EndByte
+				const endByte = searchResults[mid * 2 + 1];
+
+				if (endByte > lineStart) {
+					startIndex = mid;
+					high = mid - 1;
+				} else {
+					low = mid + 1;
+				}
+			}
+
+			for (let i = startIndex; i < totalRanges; i++) {
+				// ★ 2個1組なので i * 2 が StartByte
+				const startByte = searchResults[i * 2];
+				if (startByte >= lineEnd) break;
+				matchedIndices.push(i); // 組のインデックス（0, 1, 2...）を溜める
+			}
+			return matchedIndices;
+		}
+
+		scrollEl.addEventListener("scroll", () => {
+			const scrollTop = scrollEl.scrollTop;
+			//const newStart = Math.floor(scrollTop / lineHeight);
+			const newStart = Math.round(scrollTop / lineHeight);		// Math.floorだと一番下までスクロールしたときに安定しない場合がある。
+			if (newStart !== startLine) {
+				startLine = newStart;
+				render();
+			}
+		});
+		render();
+
+		const searchContainer = document.getElementById("searchContainer");
+		const searchButton = document.getElementById("searchButton");
+		const searchPanel = document.getElementById("searchPanel");
+		const searchBox = document.getElementById("searchBox");
+		const searchHistory = document.getElementById("searchHistory");
+		const content = document.getElementById("content");
+		const nextBtn = document.getElementById("nextBtn");
+		const prevBtn = document.getElementById("prevBtn");
+		const searchInfo = document.getElementById("searchInfo");
+		const searchResultLabel = document.getElementById("searchResultLabel");
+
+		const settingContainer = document.getElementById("settingContainer");
+		const settingButton = document.getElementById("settingButton");
+		const settingPanel = document.getElementById("settingPanel");
+		const settingTabNum = document.getElementById("settingTabNum");
+
+
+
+		let historyList = [];
+
+		new FloatingPopup(searchContainer, searchButton, searchPanel);
+		new FloatingPopup(settingContainer, settingButton, settingPanel);
+
+		let definitionPanel = null;
+		let definitionSearchBox = null;
+		let definitionHistory = null;
+		let definitionSearchRegex = null;
+		let definitionList = null;
+
+		const locationHistory = [];		// F12で移動した場合、移動前の場所を保持するための配列
+
+		document.addEventListener('DOMContentLoaded', () => {
+
+			const definitionContainer = document.getElementById("definitionContainer");
+			const definitionButton = document.getElementById("definitionButton");
+			definitionPanel = document.getElementById("definitionPanel");
+			definitionSearchBox = document.getElementById("definitionSearchBox");
+			definitionHistory = document.getElementById("definitionHistory");
+			definitionSearchRegex = document.getElementById("definitionSearchRegex");
+			definitionList = document.getElementById("definitionList");
+
+			new FloatingPopup(definitionContainer, definitionButton, definitionPanel);
+
+
+			// ツリー全体のコンテナでクリックを監視
+			definitionList.addEventListener('click', (event) => {
+				// クリックされた要素、またはその親要素で「.name」を持つものを探す
+				//console.log(`clicked`);
+				const nameEl = event.target.closest('.name');
+				if (!nameEl) return;
+				//console.log(`clicked2`);
+
+				// detailsタグの折りたたみクリックだった場合はジャンプをスキップする
+				if (event.target.tagName === 'SUMMARY' || event.target.closest('summary')) {
+					// もし「クラス名やメソッド名自体」をクリックした時だけジャンプさせたい場合
+					// 三角マークのクリックと区別するためにここで制御します
+					//return;
+				}
+				//console.log(`clicked3`);
+
+				if (nameEl.classList.contains("call") && (event.ctrlKey || event.metaKey)) {
+					const defname = nameEl.getAttribute('data-def');
+					goDef(defname);
+				} else {
+					// HTMLの data-start-byte 属性からバイト数を取得
+					const startByte = nameEl.getAttribute('data-start-byte');
+					const endByte = nameEl.getAttribute('data-end-byte');
+
+					//console.log(`clicked4 ${startByte}`);
+
+					if (startByte) {
+						jumpToDefinition(startByte);
+					}
+				}
+			});
+
+
+			const tabs = document.querySelectorAll('.def-tab-btn');
+
+			tabs.forEach(tab => {
+				tab.addEventListener('click', () => {
+					// 全てのタブボタンからactiveを外す
+					tabs.forEach(t => t.classList.remove('active'));
+					// 全てのコンテンツを非表示にする
+					document.querySelectorAll('.def-tab-content').forEach(c => c.classList.remove('active'));
+
+					// クリックされたタブをアクティブにする
+					tab.classList.add('active');
+
+					// data-tab属性に書かれたIDのコンテンツを表示する
+					const targetId = tab.getAttribute('data-tab');
+					const targetContent = document.getElementById(targetId);
+					if (targetContent) {
+						targetContent.classList.add('active');
+
+						// もし検索タブを開いたなら、自動で検索ボックスにフォーカスを合わせると親切
+						if (targetId === 'definitionSearchView') {
+							document.getElementById('definitionSearchBox').focus();
+						}
+					}
+				});
+			});
+
+			document.addEventListener("keydown", function (e) {
+
+				const isBackspace = e.key === "Backspace" && document.activeElement.tagName !== "INPUT";
+				const isAltLeft = e.key === "ArrowLeft" && e.altKey;
+
+				if (e.ctrlKey && e.key.toLowerCase() === "f") {
+					e.preventDefault(); // ブラウザ検索を止める
+					const selectedText = window.getSelection().toString();
+					// searchPanel.style.display = "block";
+					searchPanel.classList.add('show');
+					searchBox.focus();
+
+					if (selectedText) {
+						window.setKeyword(selectedText, false);
+					}
+				} else if (e.ctrlKey && e.key === ',') {
+					e.preventDefault(); // ブラウザ検索を止める
+					const selectedText = window.getSelection().toString();
+					window.setDefWord(selectedText, false);
+
+				} else if (e.key === "F12") {
+					e.preventDefault(); // ブラウザ検索を止める
+					const selectedText = window.getSelection().toString();
+					const isShown = definitionPanel.classList.contains("show");
+
+					if (selectedText) {
+						if (goDef(selectedText) !== 1) {
+							window.setDefWord(selectedText, false);
+						}
+					}
+
+				} else if (isAltLeft || isBackspace) {
+					if (locationHistory.length > 0) {
+						e.preventDefault();
+						const { scrollTop, lineNumber } = locationHistory.pop();
+						scrollEl.scrollTop = scrollTop;
+						if (lineNumber >= 0) {
+							if (defFlashTimer !== null) {
+								clearTimeout(defFlashTimer);
+							}
+							defineLine = lineNumber;
+							defFlashTimer = setTimeout(() => {
+								defineLine = -1;
+								render();
+								defFlashTimer = null;
+
+							}, 700);
+						}
+						render();
+					}
+				}
+			});
+
+			definitionSearchBox.addEventListener("input", () => {
+				executeDefSearch(definitionSearchBox.value, definitionSearchRegex.checked);
+			});
+			definitionSearchRegex.addEventListener('change', (e) => {
+				executeDefSearch(definitionSearchBox.value, definitionSearchRegex.checked);
+			});
+			definitionSearchBox.addEventListener("focus", function () {
+				this.select();
+			});
+
+
+			const menu = document.getElementById('tcm-context-menu');
+			let targetNode = null;
+
+			// ① 右クリック時にメニューを表示する
+			definitionList.addEventListener('contextmenu', (event) => {
+				// WebView2標準の右クリックメニューをキャンセル
+				event.preventDefault();
+
+				// 右クリックされた要素を記録
+				targetNode = event.target;
+
+				// カーソル位置へメニューを移動して表示
+				menu.style.left = `${event.pageX}px`;
+				menu.style.top = `${event.pageY}px`;
+				menu.style.display = 'block';
+			});
+
+			// ② メニュー項目がクリックされた時の処理
+			menu.addEventListener('click', (event) => {
+				event.preventDefault();
+				const menuItem = event.target.closest('.tcm-menu-item');
+				if (!menuItem) return;
+
+				// data-tcm-depth 属性から階層数を取得 (dataset 経由なのでキャメルケースの tcmDepth になります)
+				const depth = parseInt(menuItem.dataset.tcmDepth, 10);
+
+				if (targetNode) {
+					copyStructure(targetNode, depth);
+				}
+
+				menu.style.display = 'none';
+			});
+
+			// ③ メニュー外のクリックで非表示
+			document.addEventListener('click', (event) => {
+				if (!menu.contains(event.target)) {
+					menu.style.display = 'none';
+				}
+			});
+
+			// ④ Escキーで非表示
+			document.addEventListener('keydown', (event) => {
+				if (event.key === 'Escape') {
+					menu.style.display = 'none';
+				}
+			});
+
+			// エスケープされたHTML文字列（&lt;div&gt; など）をアンエスケープする
+			function decodeHtml(html) {
+				const txt = document.createElement("textarea");
+				txt.innerHTML = html;
+				return txt.value;
+			}
+
+			// 閉じタグが不要な要素（空要素）のリスト
+			const VOID_ELEMENTS = new Set([
+				'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+				'link', 'meta', 'param', 'source', 'track', 'wbr'
+			]);
+
+			// N階層分の構造文字列（閉じタグ付き）を生成する関数
+			function buildStructureText(targetNode, maxDepth) {
+				// 右クリックされた場所から、ツリーの要素（<details> または .tree-item）を探す
+				const rootEl = targetNode.closest('details, .tree-item');
+				if (!rootEl) return '';
+
+				const lines = [];
+
+				// 再帰的にツリーを走査する内部関数
+				function traverse(element, currentDepth) {
+					if (currentDepth > maxDepth) return;
+
+					const indent = '  '.repeat(currentDepth);
+
+					// 1. 自身の span.name から title 属性（生のタグ文字列）を取得
+					const nameSpan = element.querySelector(':scope > summary > .name, :scope > .name');
+					let rawTag = '';
+					let tagName = '';
+
+					if (nameSpan && nameSpan.title) {
+						rawTag = decodeHtml(nameSpan.title);
+
+						// タグ名（例: <div id="scroll"> から "div"）を正規表現で抽出
+						const match = rawTag.match(/^<([a-zA-Z0-9-]+)/);
+						if (match) {
+							tagName = match[1].toLowerCase();
+						}
+					}
+
+					// 開始タグを出力
+					if (rawTag) {
+						lines.push(indent + rawTag);
+					}
+
+					// 2. 子要素（.tree-children）を巡回して再帰
+					if (currentDepth < maxDepth) {
+						const childrenContainer = element.querySelector(':scope > .tree-children');
+						if (childrenContainer) {
+							const childElements = childrenContainer.querySelectorAll(':scope > details, :scope > .tree-item');
+							childElements.forEach(child => {
+								traverse(child, currentDepth + 1);
+							});
+						}
+					}
+
+					// 3. 閉じタグを出力（空要素でなく、かつタグ名が取れている場合）
+					if (tagName && !VOID_ELEMENTS.has(tagName)) {
+						// Self-closingタグ（例: <div />）で終わっていない場合のみ閉じタグを追加
+						if (!rawTag.endsWith('/>')) {
+							lines.push(`${indent}</${tagName}>`);
+						}
+					}
+				}
+
+				// 起点要素から探索開始 (深さ0)
+				traverse(rootEl, 0);
+
+				return lines.join('\n');
+			}
+
+			// 実際のコピー処理
+			function copyStructure(node, depth) {
+				const textToCopy = buildStructureText(node, depth);
+
+				if (textToCopy) {
+					// クリップボードにコピー
+					navigator.clipboard.writeText(textToCopy).then(() => {
+						console.log("コピー成功！:\n" + textToCopy);
+					});
+				}
+			}
+		});
+
+		function goDef(keyword) {
+			const hits = allSymbolsData.filter(item => item.name === keyword);
+			if (hits.length === 1) {
+				jumpToDefinition(hits[0].startByte, getSelectedTextLineNumber());
+			} else {
+
+			}
+			return hits.length;
+		}
+		function getSelectedTextLineNumber() {
+			const selection = window.getSelection();
+
+			if (selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+
+				// 選択範囲の親要素（またはテキストノードの親要素）を取得
+				const selectedEl = range.startContainer.parentElement;
+
+				// 親要素を上に向かってさかのぼり、.ts-cl を持つ要素を探す
+				const lineEl = selectedEl.closest(".ts-cl");
+
+				if (lineEl) {
+					// data-line 属性の値（"408"）を取得
+					const lineNo = lineEl.dataset.line; // または lineEl.getAttribute("data-line")
+
+					return lineNo;
+				}
+			}
+			return -1;
+		}
+
+		window.setDefWord = function (keyword, use_regex) {
+			definitionPanel.classList.add('show');
+			const tabs = document.querySelectorAll('.def-tab-btn');
+			tabs.forEach(tab => {
+				if (tab.getAttribute('data-tab') === 'search-view') {
+					tab.classList.add('active');
+				} else {
+					tab.classList.remove('active');
+				}
+			});
+
+			const contents = document.querySelectorAll('.def-tab-content');
+			contents.forEach(content => {
+				if (content.id === 'definitionSearchView') {
+					content.classList.add('active');
+				} else {
+					content.classList.remove('active');
+				}
+			});
+
+			definitionSearchBox.focus();
+
+			definitionSearchRegex.checked = use_regex;
+			if (keyword) {
+				definitionSearchBox.value = keyword;
+				definitionSearchBox.dispatchEvent(new Event("input"));
+			}
+		}
+
+
+		settingTabNum.addEventListener('input', (e) => {
+			//console.log("今の値:", e.target.value);
+			document.documentElement.style.setProperty('--tab-size', e.target.value);
+		});
+
+
+		let marks = [];
+		let currentIndex = -1;
+		window.setKeyword = function (keyword, use_regex) {
+			// searchBox.value = keyword;
+			if (getComputedStyle(searchPanel).display === "none") {
+				//searchPanel.style.display = "block";
+				searchPanel.classList.add('show');
+				searchBox.focus();
+			}
+			searchRegex.checked = use_regex;
+			searchBox.value = keyword;
+			searchBox.dispatchEvent(new Event("input"));
+		};
+		searchBox.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				// Shift押下で前、普通は次
+				const keyword = searchBox.value;
+				saveToHistory(keyword);
+
+				if (e.shiftKey) {
+					prevHit();
+				} else {
+					nextHit();
+				}
+			}
+			if (e.key === "Escape") {
+				// パネルを閉じる
+				//searchPanel.style.display = "none";
+				searchPanel.classList.remove('show');
+			}
+		});
+
+
+
+		searchBox.addEventListener("input", () => {
+			executeSearch(searchBox.value, searchRegex.checked);
+		});
+		searchRegex.addEventListener('change', (e) => {
+			executeSearch(searchBox.value, searchRegex.checked);
+		});
+
+		searchBox.addEventListener("focus", function () {
+			this.select();
+		});
+
+		nextBtn.onclick = nextHit;
+		prevBtn.onclick = prevHit;
+
+		function triggerVisibleLinesRefresh() {
+			render();
+		}
+
+		// ユーザーが入力した「普通の文字列」を、正規表現の記号として誤作動させないための脱出関数
+		function escapeRegExp(string) {
+			return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 記号の前に \ を強制付与
+		}
+
+
+
+		function executeSearch(keyword, isRegex = false, isCaseInsensitive = true) {
+
+			searchResults = [];
+			currentSearchIndex = -1;
+			searchResultLabel.textContent = "";
+
+			if (!keyword) {
+				triggerVisibleLinesRefresh();
+				return;
+			}
+			try {
+				const selectedOffset = lastSelection;
+				let startIndex = -1;
+				let pattern = isRegex ? keyword : escapeRegExp(keyword);
+				let flags = "gs";
+				if (isCaseInsensitive)
+					flags += "i";
+
+				const regex = new RegExp(pattern, flags);
+				let match;
+
+				// fileText はもう UTF16 string
+				const targetStr = fileText;
+				while ((match = regex.exec(targetStr)) !== null) {
+					if (match[0].length === 0) {
+						regex.lastIndex++;
+						continue;
+					}
+					if (selectedOffset && startIndex === -1 && selectedOffset <= match.index) {
+						startIndex = searchResults.length / 2;
+					}
+					// match.index はもう UTF16 offset
+					const start = match.index;
+					const end = start + match[0].length;
+					searchResults.push(start, end);
+
+				}
+				console.log(`検索完了: ${searchResults.length / 2} 件ヒット`);
+				if (searchResults.length > 0) {
+
+					if (!selectedOffset || startIndex === -1) {
+						currentSearchIndex = 0;
+						jumpToHit(currentSearchIndex);
+					} else {
+						currentSearchIndex = startIndex;
+						jumpToHit(currentSearchIndex);
+					}
+				} else {
+					triggerVisibleLinesRefresh();
+				}
+			} catch (e) {
+				console.error("検索エラー:", e);
+			}
+		}
+
+
+
+
+		/**
+		 * 定義検索を実行し、結果をリストに描画する
+		 * @param {string} keyword - 検索キーワード
+		 * @param {boolean} isRegex - 正規表現を使用するかどうか
+		 * @param {boolean} isCaseInsensitive - 大文字小文字を区別しないかどうか
+		 */
+		function executeDefSearch(keyword, isRegex = false, isCaseInsensitive = true) {
+			const resultListEl = document.getElementById('definitionSearchResultList');
+			const resultLabelEl = document.getElementById('definitionSearchResultLabel');
+
+			// 検索ワードが空の場合はリストをクリアして終了
+			if (!keyword) {
+				resultListEl.innerHTML = '';
+				resultLabelEl.innerText = '0件';
+				return;
+			}
+
+			let filtered = [];
+
+			try {
+				if (isRegex) {
+					// ==========================================
+					// 1. 正規表現検索の場合
+					// ==========================================
+					const flags = isCaseInsensitive ? 'i' : '';
+					const regex = new RegExp(keyword, flags);
+
+					filtered = allSymbolsData.filter(item => regex.test(item.name));
+
+					// 正規表現時は「先頭一致」の概念が複雑になるため、
+					// 文字列の最初の方でマッチしているものを優先する簡易ソート
+					filtered.sort((a, b) => {
+						const matchA = a.name.match(regex);
+						const matchB = b.name.match(regex);
+						return (matchA ? matchA.index : 0) - (matchB ? matchB.index : 0);
+					});
+				} else {
+					// ==========================================
+					// 2. 通常の文字列検索（部分一致 ＋ 先頭優先ソート）
+					// ==========================================
+					const searchKey = isCaseInsensitive ? keyword.toLowerCase() : keyword;
+
+					// まずは絞り込み
+					filtered = allSymbolsData.filter(item => {
+						const targetName = isCaseInsensitive ? item.name.toLowerCase() : item.name;
+						return targetName.includes(searchKey);
+					});
+
+					// 先頭一致を最優先にするソートを適用
+					filtered.sort((a, b) => {
+						const nameA = isCaseInsensitive ? a.name.toLowerCase() : a.name;
+						const nameB = isCaseInsensitive ? b.name.toLowerCase() : b.name;
+
+						const indexA = nameA.indexOf(searchKey);
+						const indexB = nameB.indexOf(searchKey);
+
+						// 検索文字がより手前（先頭）にあるものを優先
+						if (indexA !== indexB) {
+							return indexA - indexB;
+						}
+						// 位置が同じなら、文字数が短い（完全一致に近い）方を優先
+						//if (a.name.length !== b.name.length) {
+						//	return a.name.length - b.name.length;
+						//}
+						// それでも同じならアルファベット順
+						return a.name.localeCompare(b.name);
+					});
+				}
+			} catch (e) {
+				// 不完全な正規表現（例: 「[」だけ入力された等）の際のエラー落ちを防ぐガード
+				resultLabelEl.innerText = 'エラー';
+				resultListEl.innerHTML = `<div class="search-error">不正な検索式です</div>`;
+				return;
+			}
+
+			// ==========================================
+			// 3. 結果の描画（レンダリング）
+			// ==========================================
+			resultLabelEl.innerText = `${filtered.length}件`;
+			resultListEl.innerHTML = ''; // 過去の結果をクリア
+
+			if (filtered.length === 0) {
+				resultListEl.innerHTML = `<div class="search-no-result">一致する定義は見つかりません</div>`;
+				return;
+			}
+
+			// 検索結果をループしてHTML要素を組み立てる
+			filtered.forEach(item => {
+				const itemEl = document.createElement('div');
+				itemEl.className = `symbol-item ${item.captureType.replace('.', '-')}`;
+
+				// ユーザーがクリックした時にC#側にジャンプ要求を送るためのイベント
+				itemEl.onclick = () => {
+					searchRegex.checked = true;
+					searchBox.value = `(?<![A-Za-z0-9_])${item.name}(?![A-Za-z0-9_])`;
+					executeSearch(searchBox.value, searchRegex.checked);
+					lastSelection = item.startByte;
+					jumpToDefinition(item.startByte);
+				};
+
+				// 中身のテキストを構築（Declaration があれば右側に薄く添える）
+				const nameSpan = document.createElement('span');
+				nameSpan.className = 'name';
+				nameSpan.innerText = item.name;
+
+				itemEl.appendChild(nameSpan);
+
+				if (item.declaration) {
+					const declSpan = document.createElement('span');
+					declSpan.className = 'symbol-declaration';
+					declSpan.innerText = `  -  ${item.declaration}`;
+					itemEl.appendChild(declSpan);
+				}
+
+				resultListEl.appendChild(itemEl);
+			});
+		}
+		let defFlashTimer = null;
+
+		function jumpToDefinition(startByte, orgLineNumber = -1) {
+			if (defFlashTimer !== null) {
+				clearTimeout(defFlashTimer);
+			}
+
+			locationHistory.push({ scrollTop: scrollEl.scrollTop, lineNumber: orgLineNumber });
+
+			const start = parseInt(startByte, 10);
+			defineLine = getLineNumber(start);
+			console.log(`taget line = ${defineLine}`);
+			jumpToStartByte(start);
+
+			defFlashTimer = setTimeout(() => {
+				defineLine = -1;
+				render();
+				defFlashTimer = null;
+
+			}, 700);
+		}
+
+		function getLineNumber(startByte) {
+			let low = 0;
+			let high = lineStartOffsets.length - 1;
+			let targetLineIdx = 0;
+
+			while (low <= high) {
+				const mid = (low + high) >> 1;
+				if (lineStartOffsets[mid] <= startByte) {
+					targetLineIdx = mid;
+					low = mid + 1; // もっと後ろの行の可能性を探る
+				} else {
+					high = mid - 1;
+				}
+			}
+			return targetLineIdx;
+		}
+
+		function jumpToStartByte(startByte) {
+			// console.log(`jumpToStartByte: ${startByte}`);
+			let targetLineIdx = getLineNumber(startByte);
+			scrollToLine(targetLineIdx - 10);
+			triggerVisibleLinesRefresh();
+		}
+
+
+		// 指定したヒットインデックス（0番目、1番目...）へスクロール＆フォーカスする内部関数
+		function jumpToHit(index) {
+			if (searchResults.length === 0 || index < 0 || index >= searchResults.length / 2) return;
+
+			searchResultLabel.textContent = `${index + 1} / ${searchResults.length / 2}`;
+
+			currentSearchIndex = index;
+			const startByte = searchResults[index * 2];
+
+			jumpToStartByte(startByte);
+		}
+
+		// 【次へ】ボタン用
+		function nextHit() {
+			if (searchResults.length === 0) return;
+			let nextIdx = currentSearchIndex + 1;
+			if (nextIdx >= searchResults.length / 2) {
+				nextIdx = 0; // 末尾まで行ったら最初に戻る（ループ）
+			}
+			jumpToHit(nextIdx);
+		}
+
+		// 【前へ】ボタン用
+		function prevHit() {
+			if (searchResults.length === 0) return;
+			let prevIdx = currentSearchIndex - 1;
+			if (prevIdx < 0) {
+				prevIdx = (searchResults.length / 2) - 1; // 最初より前に行ったら末尾に飛ぶ
+			}
+			jumpToHit(prevIdx);
+		}
+
+		function updateHistoryDOM() {
+			// 一度中身を空にする
+			searchHistory.innerHTML = "";
+
+			// 配列内のワードを option タグにして追加
+			historyList.forEach(word => {
+				const option = document.createElement("option");
+				option.value = word;
+				searchHistory.appendChild(option);
+			});
+		}
+
+		// 3. 新しい検索ワードを履歴に追加する関数
+		function saveToHistory(word) {
+			if (!word || word.trim() === "") return;
+
+			// すでに同じワードがあれば重複防止のために一度削除
+			historyList = historyList.filter(item => item !== word);
+
+			// 配列の先頭（最新）に追加
+			historyList.unshift(word);
+
+			// 履歴の件数制限（例：直近10件まで）
+			if (historyList.length > 10) {
+				historyList = historyList.slice(0, 10);
+			}
+
+			// 見た目を更新
+			updateHistoryDOM();
+		}
+	</script>
+
+	<div id="definitionContainer">
+		<div id="definitionButton">📝</div>
+		<div id="definitionPanel">
+			<div class="definition-tabs">
+				<button class="def-tab-btn active" data-tab="definitionTreeView">構造ツリー</button>
+				<button class="def-tab-btn" data-tab="definitionSearchView">定義検索</button>
+				<button class="def-tab-btn" data-tab="definitionReferView">参照検索</button>
+			</div>
+
+			<div id="definitionTreeView" class="def-tab-content active">
+				<div id="definitionList">
+					/*insert by C# 2*/
+				</div>
+			</div>
+
+			<div id="definitionSearchView" class="def-tab-content">
+				<div class="search-header">
+					<input type="text" id="definitionSearchBox" placeholder="定義検索" autocomplete="off" spellcheck="false" list="definitionHistory">
+					<datalist id="definitionHistory"></datalist>
+					<div class="definitionSearchNav">
+						<label id="definitionRegexLabel"><input type="checkbox" id="definitionSearchRegex">正規表現</label>
+						<label id="definitionSearchResultLabel">0件</label>
+					</div>
+				</div>
+				<div id="definitionSearchResultList">
+				</div>
+			</div>
+			<div id="definitionReferView" class="def-tab-content">
+				<div class="search-header">
+					<input type="text" id="definitionReferSearchBox" placeholder="参照検索" autocomplete="off" spellcheck="false" list="definitionHistory">
+					</div>
+				<div id="definitionReferResultList">
+				</div>
+				</div>
+			</div>
+	</div>
+
+	<!-- 右クリックで表示するカスタムコンテキストメニュー -->
+	<div id="tcm-context-menu" class="tcm-menu">
+		<div class="tcm-menu-header">N階層構造をコピー</div>
+		<div class="tcm-menu-item" data-tcm-depth="1">1 階層（直下のみ）</div>
+		<div class="tcm-menu-item" data-tcm-depth="2">2 階層</div>
+		<div class="tcm-menu-item" data-tcm-depth="3">3 階層</div>
+		<div class="tcm-menu-item" data-tcm-depth="4">4 階層</div>
+		<div class="tcm-menu-item" data-tcm-depth="5">5 階層</div>
+	</div>
+
+</body>
+</html>
