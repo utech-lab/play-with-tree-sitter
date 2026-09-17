@@ -187,38 +187,6 @@ namespace TreeSitterTest
 					wr.Write(temp_html);
 				}
 			}
-			if (result?.Langs != null) {
-				string temp_html = MemoUtil.ElementsTemplateHtml;
-				string ele_detail = "";
-
-				foreach (var root in result.Langs) {
-					if (result.Langs.Count > 1) {
-						ele_detail += $"<details style='margin-left: 15px;'><summary><b>[{root.ElementRoot.Language}]</b></span></summary>" + TreeSitterUtil.ToHtmlTree(root.ElementRoot) + "</details>";
-					} else {
-						ele_detail += TreeSitterUtil.ToHtmlTree(root.Root);
-					}
-				}
-				temp_html = temp_html.Replace("/*** replace detail tree by C# ***/", ele_detail);
-
-				var sb = new StringBuilder();
-
-				var lines = body.Replace("\r\n", "\n").Split('\n');
-
-				for (int i = 0; i < lines.Length; i++) {
-					sb.Append($"<div class=\"line\" data-line=\"{i + 1}\">");
-					sb.Append($"<span class=\"ln\">{i + 1}</span>");
-					sb.Append("<span class=\"code\">");
-					sb.Append(System.Web.HttpUtility.HtmlEncode(lines[i]));
-					sb.Append("</span>");
-					sb.AppendLine("</div>");
-				}
-
-
-				temp_html = temp_html.Replace("/*** replace source code ***/", sb.ToString());
-				using (var wr = new StreamWriter("symbols.html")) {
-					wr.Write(temp_html);
-				}
-			}
 
 			if (result?.Langs != null) {
 
