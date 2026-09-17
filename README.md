@@ -7,3 +7,25 @@ Qiita 記事のサンプルコードや補助ツールを置いています。
 - tree-sitter-scm/ : Tree-sitter のscm
 - result/ : サンプルアプリで生成したファイル類
 
+## Runtime Requirements
+ファイルは以下のように配置して下さい
+
+The following files must be placed in the same directory as the executable:
+```
+<exe directory>/
+  ├ Libs/*.dll              # Tree-sitter native DLLs
+  └ tree-sitter/*.scm       # Tree-sitter query files
+
+Example:
+C:/my/src/TreeSitterTest/bin/Debug/
+  ├ TreeSitterTest.exe
+  ├ Libs/
+  │   ├ tree-sitter.dll
+  │   ├ tree-sitter-html.dll
+  │   └ ...
+  └ tree-sitter/
+      ├ html.scm
+      ├ javascript.scm
+      └ ...
+```
+
