@@ -9,8 +9,6 @@ Qiita 記事のサンプルコードや補助ツールを置いています。
 
 ## Runtime Requirements
 ファイルは以下のように配置して下さい
-
-The following files must be placed in the same directory as the executable:
 ```
 <exe directory>/
   ├ Libs/*.dll              # Tree-sitter native DLLs
