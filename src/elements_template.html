@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>3-Pane Source Code Viewer</title>
+    <style>
+		body {
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column; /* 上下に並べる */
+			height: 100vh;
+			font-family: 'Consolas', 'Courier New', monospace;
+			font-size: 20px;
+			background-color: #1e1e1e;
+			color: #d4d4d4;
+			overflow: hidden;
+		}
+
+        /* --------------------------------------------------
+           1. 上段：オリジナルソースコードエリア
+        -------------------------------------------------- */
+		#top-pane {
+			font-family: Consolas, monospace;
+			height: 40%; /* 初期の高さ */
+			min-height: 100px;
+			overflow-y: auto;
+			padding: 20px;
+		}
+
+		.line {
+			display: flex;
+		}
+
+		.ln {
+			width: 4em;
+			text-align: right;
+			color: #808080;
+			user-select: none;
+			margin-right: 1em;
+			flex-shrink: 0;
+			background-color: #2a2a2a;
+		}
+
+		.code {
+			white-space: pre;
+		}
+
+        /* 上下のサイズ変更線 */
+        #v-resizer {
+            height: 6px;
+            cursor: row-resize; /* 上下矢印カーソル */
+            background-color: #333;
+            transition: background-color 0.2s;
+        }
+        #v-resizer:hover, .v-resizing #v-resizer { background-color: #007acc; }
+
+        /* --------------------------------------------------
+           2. 下段：2分割エリアのコンテナ
+        -------------------------------------------------- */
+        #bottom-container {
+            flex: 1; /* 残りの高さをすべて使う */
+            display: flex; /* 左右に並べる */
+            overflow: hidden;
+        }
+
+        /* 下左：ツリー構造 */
+        #tree-sidebar {
+            width: 40%; /* 初期の幅 */
+            min-width: 150px;
+            overflow-y: auto;
+            padding: 15px;
+            box-sizing: border-box;
+            background-color: #252526;
+        }
+
+        /* 左右のサイズ変更線 */
+        #h-resizer {
+            width: 6px;
+            cursor: col-resize; /* 左右矢印カーソル */
+            background-color: #333;
+            transition: background-color 0.2s;
+        }
+        #h-resizer:hover, .h-resizing #h-resizer { background-color: #007acc; }
+
+        /* 下右：選択されたノードのContent全文表示 */
+        #detail-pane {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #1a1a1a;
+            white-space: pre-wrap; /* 長いコードも端で折り返す */
+            border-top: 1px solid #333;
+            user-select: text;
+        }
+
+        /* ツリー用スタイル */
+        details { margin-left: 12px; }
+        summary { cursor: pointer; padding: 2px; }
+        summary:hover { background-color: #37373d; }
+        .tree-item { cursor: pointer; padding: 2px; }
+        .tree-item:hover { background-color: #37373d; color: #fff; }
+		.is-named { color: aqua; }
+		.field { color: greenyellow;}
+		.range {
+			color: white;
+		}
+		.jump-flash {
+			animation: jumpFlashEffect 0.7s ease-out; /* 0.7秒かけてじわっと消える */
+		}
+
+		@keyframes jumpFlashEffect {
+			0% {
+				background-color: rgba(255, 230, 100, 0.7); /* 注目を引きやすい黄色 */
+			}
+
+			100% {
+				background-color: rgba(255, 230, 100, 0.0);
+			}
+		}
+		.node-type {
+			background-color: #333;
+			color: white;
+		}
+    </style>
+</head>
+<body>
+
+    <div id="top-pane">/*** replace source code ***/</div>
+
+    <div id="v-resizer"></div>
+
+    <div id="bottom-container">
+        
+        <div id="tree-sidebar">
+            /*** replace detail tree by C# ***/
+        </div>
+
+        <div id="h-resizer"></div>
+
+        <div id="detail-pane">※ツリーの項目をクリックすると、ここにelement.Contentの全文がそのまま表示されます。</div>
+    </div>
+
+    <script>
+        const topPane = document.getElementById('top-pane');
+        const vResizer = document.getElementById('v-resizer');
+        const sidebar = document.getElementById('tree-sidebar');
+        const hResizer = document.getElementById('h-resizer');
+        const detailPane = document.getElementById('detail-pane');
+
+        // ① 上下のドラッグ処理
+        vResizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            document.body.classList.add('v-resizing');
+            function onMouseMove(e) {
+                topPane.style.height = e.clientY + 'px';
+            }
+            function onMouseUp() {
+                document.body.classList.remove('v-resizing');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // ② 左右のドラッグ処理
+        hResizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            document.body.classList.add('h-resizing');
+            function onMouseMove(e) {
+                // 下段コンテナ内での相対的なX座標を計算
+                const sidebarWidth = e.clientX;
+                sidebar.style.width = sidebarWidth + 'px';
+            }
+            function onMouseUp() {
+                document.body.classList.remove('h-resizing');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // ③ ツリークリック連動処理
+        //document.getElementById('tree-sidebar').addEventListener('click', function(e) {
+        //    const item = e.target.closest('.tree-item');
+        //    if (!item) return;
+            
+            // data-content属性に仕込んだ全文を右下のペインに流し込む
+        //    const fullContent = item.getAttribute('data-content');
+        //    if (fullContent) {
+        //        detailPane.textContent = fullContent;
+        //    }
+       // });
+// 差し替えるJavaScriptコード
+document.getElementById('tree-sidebar').addEventListener('click', function(e) {
+    // 1. クリックされた位置に '.tree-item' (文字部分) があるかチェック
+    const item = e.target.closest('.tree-item');
+    
+    if (item) {
+        // ★ここが魔法の1行：文字がクリックされた場合、detailsのデフォルトの開閉挙動を絶対にさせない
+        e.preventDefault();
+
+		const typeString = item.getAttribute('data-type');
+        // 2. 右下のペインにContentを表示する（今までの処理）
+        const fullContent = item.getAttribute('data-content');
+        if (fullContent) {
+            // detailPane.textContent = ' ** ' + typeString + ' ** \n\n' +  fullContent;
+			detailPane.innerHTML =
+				'<div class="node-type">[' + escapeHtml(typeString) + ']</div><br>' +
+				'<div class="content">' + escapeHtml(fullContent) + '</div>';
+        }
+
+		const lineNumber = item.getAttribute('data-line');
+        jumpToLine(lineNumber);
+
+        // 3. 【おまけ】今どれを選択してるか分かりやすくするため、クリックされた文字に色をつける
+        document.querySelectorAll('.tree-item').forEach(el => el.style.backgroundColor = '');
+        item.style.backgroundColor = '#37373d';
+    }
+});
+		function jumpToLine(line) {
+			const elem = document.querySelector(`.line[data-line="${line}"]`);
+			if (!elem) return;
+
+			elem.scrollIntoView({
+				behavior: "smooth",
+				block: "center"
+            });
+			elem.classList.add('jump-flash');
+			setTimeout(() => {
+                elem.classList.remove('jump-flash');
+			}, 700);
+		}
+        function escapeHtml(str) {
+            if (str) {
+                return str
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+            } else {
+                return "";
+            }
+		}
+    </script>
+</body>
+</html>

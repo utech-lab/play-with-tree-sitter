@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>code viewer</title>
+	<style>
+		body {
+			margin: 0;
+			font-family: monospace;
+			color: white;
+			font-size: 16px;
+			font-family: sans-serif;
+			margin: 0;
+			padding: 0;
+			height: 100%;
+		}
+
+
+
+		#topSpacer, #bottomSpacer {
+			width: 100%;
+		}
+
+		#visible {
+			margin: 0;
+			padding: 0;
+		}
+
+		.ts-ln {
+			background-color: #2a2a2a;
+			width: 3em;
+			text-align: right;
+			padding-right: 8px;
+			font-family: monospace;
+			user-select: none;
+			flex-shrink: 0;
+		}
+		/*
+		.ts-cl {
+			display: flex;
+			flex-direction: row;
+			align-items: flex-start;
+			white-space: pre;
+			font-family: monospace;
+		}*/
+		.ts-cl {
+			display: flex;
+			height: 20px;
+			line-height: 20px;
+			overflow: hidden;
+			box-sizing: border-box;
+			flex-shrink: 0;
+		}
+
+		.ts-ln,
+		.code-content {
+			height: 20px;
+			line-height: 20px;
+			box-sizing: border-box;
+			overflow: hidden;
+			white-space: pre;
+		}
+
+		.code-snippet {
+			overflow: auto;
+		}
+
+			.ts-ju {
+				background-color: #263d5a;
+			}
+		/* 基本の背景とフォント */
+
+		.ts-code {
+			background-color: #1e1e1e;
+			color: #d4d4d4;
+			font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+			line-height: 1.5;
+			white-space: pre;
+			tab-size: var(--tab-size, 4);
+		}
+
+		/* 言語共通のハイライトカラー */
+		.ts-keyword {
+			color: #569cd6;
+			font-weight: bold;
+		}
+		/* if, return, class */
+		.ts-control {
+			color: #c586c0;
+		}
+		/* 制御系キーワードを分ける場合 */
+		.ts-string {
+			color: #ce9178;
+		}
+		/* "hello" */
+		.ts-number {
+			color: #b5cea8;
+		}
+		/* 123 */
+		.ts-comment {
+			color: #6a9955;
+			font-style: italic;
+		}
+		/* // comment */
+		.ts-type {
+			color: #4ec9b0;
+		}
+		/* string, int, MyClass */
+		.ts-function {
+			color: #dcdcaa;
+		}
+		/* method_name */
+		.ts-function-method {
+			color: #dcdcaa;
+		}
+		/* C#などのメソッド */
+		.ts-variable {
+			color: #9cdcfe;
+		}
+		/* ローカル変数
+		.ts-property {
+			color: #9cdcfe;
+		}*/
+		/* プロパティ */
+		.ts-parameter {
+			color: #9cdcfe;
+		}
+		/* 引数 */
+		.ts-operator {
+			color: #d4d4d4;
+		}
+		/* +, -, = */
+		/*.ts-punctuation-bracket {
+			color: #ffd700;
+		}*/
+		/* { } ( ) */
+		.ts-punctuation-delimiter {
+			color: #d4d4d4;
+		}
+		/* , ; */
+		.ts-label {
+			color: #c586c0;
+		}
+		/* case:, goto: */
+		.ts-type-builtin {
+			color: #569CD6;
+		}
+
+		.ts-variable-parameter {
+			color: #9CDCFE;
+		}
+
+		.ts-tag {
+			color: #569CD6;
+		}
+
+		.ts-attribute {
+			color: #9CDCFE;
+		}
+
+		.ts-string-escape {
+			color: #FFD68F;
+		}
+
+		.ts-function-call {
+			color: #DCDCAA;
+		}
+	</style>
+</head>
+<body>
+	<div class="code-snippet ts-code">
